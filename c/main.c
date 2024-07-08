@@ -54,13 +54,13 @@ int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP
     return -1;
   }
 
-  //set_value(key, 32);
+  printf("key raw %02x, %02x, %02x, %02x\n", key[0], key[1],key[2],key[3]);
+  // set key as hardcode "bbb..."
+  set_value(key, 32);
+  // set iv as hardcode "aaa.."
   set_value(iv, 16);
   printf("pwd size %d, val %s, salt %s\n", key_data_len, key_data, salt);
-  printf("key raw %02x, %02x, %02x, %02x\n", key[0], key[1],key[2],key[3]);
-  printf("Key size %d, val %s, iv %s\n", i, hex_2_string(key, 32), hex_2_string(iv, 32));
-
-
+  printf("Key size %d, val %s, iv %s\n", i, hex_2_string(key, 32), hex_2_string(iv, 16));
 
   EVP_CIPHER_CTX_init(e_ctx);
   EVP_EncryptInit_ex(e_ctx, EVP_aes_256_cbc(), NULL, key, iv);
@@ -129,7 +129,10 @@ int main(int argc, char **argv)
 //                   "\nWho are you ?\nI am the 'Doctor'.\n'Doctor' who ?\nPrecisely!",
 //                   NULL};
 
-   char *input[] = {"hello"};
+  char tmp[17]={'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e'};
+  tmp[15] = 0x1;
+  tmp[16] = 0x0;
+  char *input[] = {tmp, NULL};
 
   /* the key_data is read from the argument list */
   key_data = (unsigned char *)argv[1];
@@ -146,7 +149,8 @@ int main(int argc, char **argv)
     char *plaintext;
     unsigned char *ciphertext;
     int olen, len;
-    
+
+    printf("input =%s, len = %d\n",input[i], strlen(input[i]));
     /* The enc/dec functions deal with binary data and not C strings. strlen() will 
        return length of the string without counting the '\0' string marker. We always
        pass in the marker byte to the encrypt/decrypt functions so that after decryption 

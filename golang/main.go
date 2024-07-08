@@ -36,7 +36,7 @@ func getKey(n int) []byte {
 }
 func main() {
 
-	msg := "hello"
+	msg := "0123456789abcde"
 	passwd := "qwerty"
 	mode := "cbc"
 	size := 32
@@ -57,12 +57,13 @@ func main() {
 
 	pwsalt := getSalt(16) // 96 bits for nonce/IV
 
-	key := pbkdf2.Key([]byte(passwd), pwsalt, 5, size, sha256.New)
+	key := pbkdf2.Key([]byte(passwd), pwsalt, 14, size, sha256.New)
+	fmt.Printf("passwd %s, pwsalt %s,key: %v\n", passwd, pwsalt, key)
 
 	key = getKey(32)
-	fmt.Printf("passwd %s, pwsalt %s,key: %v\n", passwd, pwsalt, key)
+	fmt.Printf("passwd %s, pwsalt %s,key2: %v\n", passwd, pwsalt, key)
 	block, _ := aes.NewCipher(key)
-	fmt.Printf("block: %v\n", block)
+	fmt.Printf("block size: %d\n", block.BlockSize())
 
 	var salt []byte
 	var plain []byte
