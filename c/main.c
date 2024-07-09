@@ -70,9 +70,10 @@ int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP
 unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, int *len)
 {
   /* max ciphertext len for a n bytes of plaintext is n + AES_BLOCK_SIZE -1 bytes */
-  int c_len = *len + AES_BLOCK_SIZE, f_len = 0;
+  int c_len = (*len/16 + 1) * AES_BLOCK_SIZE, f_len = 0;
   unsigned char *ciphertext = malloc(c_len);
 
+  printf("c_len = %d, block size = %d\n", c_len, AES_BLOCK_SIZE);
   /* allows reusing of 'e' for multiple encryption cycles */
   EVP_EncryptInit_ex(e, NULL, NULL, NULL, NULL);
 
