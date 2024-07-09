@@ -27,6 +27,36 @@ void set_value(char * ptr, int len) {
         }
 }
 
+#define MAXBLOCKSIZE_PKCS7 128
+
+int
+pkcs7_pad(char *buff, size_t blocksize, size_t startpoint) {
+	char padbyte;
+	int  i;
+
+	if((buff == NULL) || (blocksize > MAXBLOCKSIZE_PKCS7)) {
+		printf("invalid pad arg!\n");
+                return -1;
+	}
+	padbyte = blocksize - startpoint % blocksize;
+	if(padbyte == 0) padbyte = blocksize;
+
+	for(i = 0; i < padbyte; i++) buff[startpoint + i] = padbyte;
+	return padbyte;
+}
+
+int pkcs7_unpad(char *buff, size_t blocksize, size_t buff_size) {
+        if(buff_size < blocksize || (buff == NULL) || (blocksize > MAXBLOCKSIZE_PKCS7)) {
+                printf("invalid unpad arg!\n");
+                return -1;
+        }
+
+        char pad = buff[buff_size-1];
+        for(int i = 0; i < pad; i++) buff[buff_size - 1 -i] = 0x0;
+        printf("pad = %02x, buff = %s\n", pad, buff);
+        return pad;
+}
+
 /**
  * Create a 256 bit key and IV using the supplied key_data. salt can be added for taste.
  * Fills in the encryption and decryption ctx objects and returns 0 on success
@@ -44,9 +74,9 @@ int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP
    */
   printf("pwd %s, len %d; salt %s, len %d\n", key_data, key_data_len, salt, strlen(salt));
   i = PKCS5_PBKDF2_HMAC(key_data, key_data_len, salt, strlen(salt), nrounds, EVP_sha256(), sizeof(key), key);
-  if (strlen(key) != 32) {
-    printf("Key size is %d bits - should be 256 bits\n", i);
-    //return -1;
+  if (i !=1) {
+    printf("PKCS5_PBKDF2_HMAC failed, ret  = %d\n", i);
+    return -1;
   }
 
   printf("key raw %02x, %02x, %02x, %02x\n", key[0], key[1],key[2],key[3]);
@@ -70,21 +100,27 @@ int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP
 unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, int *len)
 {
   /* max ciphertext len for a n bytes of plaintext is n + AES_BLOCK_SIZE -1 bytes */
-  int c_len = (*len/16 + 1) * AES_BLOCK_SIZE, f_len = 0;
+  int c_len = *len + AES_BLOCK_SIZE -1, f_len = 0;
   unsigned char *ciphertext = malloc(c_len);
+  unsigned char *plaintext_pad = malloc(c_len);
 
-  printf("c_len = %d, block size = %d\n", c_len, AES_BLOCK_SIZE);
+  memset(ciphertext, 0, c_len);
+  memcpy(plaintext_pad, plaintext, *len);
+  int pad_len = pkcs7_pad(plaintext_pad, AES_BLOCK_SIZE, strlen(plaintext));
+
+  printf("c_len = %d, *len= %d, pad_len = %d\n", c_len, *len, pad_len);
   /* allows reusing of 'e' for multiple encryption cycles */
   EVP_EncryptInit_ex(e, NULL, NULL, NULL, NULL);
 
   /* update ciphertext, c_len is filled with the length of ciphertext generated,
     *len is the size of plaintext in bytes */
-  EVP_EncryptUpdate(e, ciphertext, &c_len, plaintext, *len);
+  EVP_EncryptUpdate(e, ciphertext, &c_len, plaintext, *len-1);
 
   /* update ciphertext with the final remaining bytes */
   EVP_EncryptFinal_ex(e, ciphertext+c_len, &f_len);
 
   *len = c_len + f_len;
+  printf("*len = %d after encryption\n", *len);
   return ciphertext;
 }
 
@@ -101,12 +137,18 @@ unsigned char *aes_decrypt(EVP_CIPHER_CTX *e, unsigned char *ciphertext, int *le
   EVP_DecryptUpdate(e, plaintext, &p_len, ciphertext, *len);
   EVP_DecryptFinal_ex(e, plaintext+p_len, &f_len);
 
+  pkcs7_unpad(plaintext, 16, *len);
   *len = p_len + f_len;
   return plaintext;
 }
 
 int main(int argc, char **argv)
 {
+
+  if (argc <= 1) {
+      printf("Please set key_data as argument!\n");
+      return -1;
+  }
   /* "opaque" encryption, decryption ctx structures that libcrypto uses to record
      status of enc/dec operations */
   EVP_CIPHER_CTX* en = EVP_CIPHER_CTX_new();
@@ -119,14 +161,12 @@ int main(int argc, char **argv)
   unsigned char salt[] = {'a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a', 0};
   unsigned char *key_data;
   int key_data_len, i;
-//  char *input[] = {"a", "hello", "this is a test", "this is a bigger test", 
-//                   "\nWho are you ?\nI am the 'Doctor'.\n'Doctor' who ?\nPrecisely!",
-//                   NULL};
+  char *input[] = {"0123456789abcde", NULL};
 
-  char tmp[17]={'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e'};
-  tmp[15] = 0x1;
-  tmp[16] = 0x0;
-  char *input[] = {tmp, NULL};
+  //char tmp[17]={'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e'};
+  //tmp[15] = 0x1;
+  //tmp[16] = 0x0;
+  //char *input[] = {tmp, NULL};
 
   /* the key_data is read from the argument list */
   key_data = (unsigned char *)argv[1];
@@ -156,7 +196,7 @@ int main(int argc, char **argv)
     plaintext = (char *)aes_decrypt(de, ciphertext, &len);
 
     if (strncmp(plaintext, input[i], olen)) 
-      printf("FAIL: enc/dec failed for \"%s\"\n", input[i]);
+      printf("FAIL: enc/dec failed for \"%s\", plaintext = \"%s\"\n", input[i], plaintext);
     else 
       printf("OK: enc/dec ok for \"%s\"\n", plaintext);
     
