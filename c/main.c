@@ -48,10 +48,11 @@ int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP
    * nrounds is the number of times the we hash the material. More rounds are more secure but
    * slower.
    */
-  i = EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha256(), salt, key_data, key_data_len, nrounds, key, iv);
-  if (i != 32) {
+  printf("pwd %s, len %d; salt %s, len %d\n", key_data, key_data_len, salt, strlen(salt));
+  i = PKCS5_PBKDF2_HMAC(key_data, key_data_len, salt, strlen(salt), nrounds, EVP_sha256(), sizeof(key), key);
+  if (strlen(key) != 32) {
     printf("Key size is %d bits - should be 256 bits\n", i);
-    return -1;
+    //return -1;
   }
 
   printf("key raw %02x, %02x, %02x, %02x\n", key[0], key[1],key[2],key[3]);
@@ -122,7 +123,7 @@ int main(int argc, char **argv)
      compiled in salt. We just read the bit pattern created by these two 4 byte 
      integers on the stack as 64 bits of contigous salt material - 
      ofcourse this only works if sizeof(int) >= 4 */
-  unsigned char salt[] = {'a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a'};
+  unsigned char salt[] = {'a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a', 0};
   unsigned char *key_data;
   int key_data_len, i;
 //  char *input[] = {"a", "hello", "this is a test", "this is a bigger test", 
