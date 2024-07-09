@@ -22,15 +22,9 @@ unsigned char *hex_2_string(const unsigned char* hex, const unsigned int length)
 }
 
 void set_value(char * ptr, int len) {
-    if (len > 16)
-	for (int i=0; i<len; i++) {
-		ptr[i] = 'b';
-	}
-    else {
         for (int i=0; i<len; i++) {
                 ptr[i] = 'a';
         }
-	}
 }
 
 /**
@@ -56,8 +50,6 @@ int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP
   }
 
   printf("key raw %02x, %02x, %02x, %02x\n", key[0], key[1],key[2],key[3]);
-  // set key as hardcode "bbb..."
-  set_value(key, 32);
   // set iv as hardcode "aaa.."
   set_value(iv, 16);
   printf("pwd size %d, val %s, salt %s\n", key_data_len, key_data, salt);

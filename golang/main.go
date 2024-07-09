@@ -26,14 +26,7 @@ func getSalt(n int) []byte {
 	return (nonce)
 
 }
-func getKey(n int) []byte {
-	nonce := make([]byte, n)
-        for i, _ :=range nonce {
-		nonce[i]='b'
-	}
-	return (nonce)
 
-}
 func main() {
 
 	msg := "0123456789abcde"
@@ -60,7 +53,6 @@ func main() {
 	key := pbkdf2.Key([]byte(passwd), pwsalt, 14, size, sha256.New)
 	fmt.Printf("passwd %s, pwsalt %s,key: %v\n", passwd, pwsalt, key)
 
-	key = getKey(32)
 	fmt.Printf("passwd %s, pwsalt %s,key2: %v\n", passwd, pwsalt, key)
 	block, _ := aes.NewCipher(key)
 	fmt.Printf("block size: %d\n", block.BlockSize())
