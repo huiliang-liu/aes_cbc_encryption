@@ -100,7 +100,7 @@ int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP
 unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, int *len)
 {
   /* max ciphertext len for a n bytes of plaintext is n + AES_BLOCK_SIZE -1 bytes */
-  int c_len = *len + AES_BLOCK_SIZE -1, f_len = 0;
+  int c_len = *len + AES_BLOCK_SIZE, f_len = 0;
   unsigned char *ciphertext = malloc(c_len);
   unsigned char *plaintext_pad = malloc(c_len);
 
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
   unsigned char salt[] = {'a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a', 0};
   unsigned char *key_data;
   int key_data_len, i;
-  char *input[] = {"0123456789abcde", NULL};
+  char *input[] = {"0123456789abcde", "0123456789abcdef", NULL};
 
   //char tmp[17]={'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e'};
   //tmp[15] = 0x1;
