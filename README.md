@@ -1,12 +1,12 @@
 # aes_cbc_encryption
 
-# build & run golang
+## build & run golang
 ```
 cd golang
 go run main.go
 ```
 
-# build & run c part
+## build & run c part
 ```
 cd c
 gcc main.c -lcrypto -o a.out

@@ -29,8 +29,7 @@ void set_value(char * ptr, int len) {
 
 #define MAXBLOCKSIZE_PKCS7 128
 
-int
-pkcs7_pad(char *buff, size_t blocksize, size_t startpoint) {
+int pkcs7_pad(char *buff, size_t blocksize, size_t startpoint) {
 	char padbyte;
 	int  i;
 
@@ -53,7 +52,7 @@ int pkcs7_unpad(char *buff, size_t blocksize, size_t buff_size) {
 
         char pad = buff[buff_size-1];
         for(int i = 0; i < pad; i++) buff[buff_size - 1 -i] = 0x0;
-        printf("pad = %02x, buff = %s\n", pad, buff);
+        printf("pad = %d, buff = %s\n", pad, buff);
         return pad;
 }
 
@@ -79,11 +78,9 @@ int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP
     return -1;
   }
 
-  printf("key raw %02x, %02x, %02x, %02x\n", key[0], key[1],key[2],key[3]);
   // set iv as hardcode "aaa.."
   set_value(iv, 16);
-  printf("pwd size %d, val %s, salt %s\n", key_data_len, key_data, salt);
-  printf("Key size %d, val %s, iv %s\n", i, hex_2_string(key, 32), hex_2_string(iv, 16));
+  printf("Key:  %s, iv: %s\n", hex_2_string(key, 32), hex_2_string(iv, 16));
 
   EVP_CIPHER_CTX_init(e_ctx);
   EVP_EncryptInit_ex(e_ctx, EVP_aes_256_cbc(), NULL, key, iv);
@@ -102,20 +99,16 @@ unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, int *len
   /* max ciphertext len for a n bytes of plaintext is n + AES_BLOCK_SIZE -1 bytes */
   int c_len = *len + AES_BLOCK_SIZE, f_len = 0;
   unsigned char *ciphertext = malloc(c_len);
-  unsigned char *plaintext_pad = malloc(c_len);
 
-  memset(ciphertext, 0, c_len);
-  memcpy(plaintext_pad, plaintext, *len);
-  int pad_len = pkcs7_pad(plaintext_pad, AES_BLOCK_SIZE, strlen(plaintext));
-
-  printf("c_len = %d, *len= %d, pad_len = %d\n", c_len, *len, pad_len);
+  //printf("c_len = %d, *len= %d, pad_len = %d\n", c_len, *len, pad_len);
   /* allows reusing of 'e' for multiple encryption cycles */
   EVP_EncryptInit_ex(e, NULL, NULL, NULL, NULL);
 
   /* update ciphertext, c_len is filled with the length of ciphertext generated,
     *len is the size of plaintext in bytes */
-  EVP_EncryptUpdate(e, ciphertext, &c_len, plaintext, *len-1);
+  EVP_EncryptUpdate(e, ciphertext, &c_len, plaintext, *len);
 
+  printf("c_len = %d after encryption\n", c_len);
   /* update ciphertext with the final remaining bytes */
   EVP_EncryptFinal_ex(e, ciphertext+c_len, &f_len);
 
@@ -161,12 +154,7 @@ int main(int argc, char **argv)
   unsigned char salt[] = {'a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a', 0};
   unsigned char *key_data;
   int key_data_len, i;
-  char *input[] = {"0123456789abcde", "0123456789abcdef", NULL};
-
-  //char tmp[17]={'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e'};
-  //tmp[15] = 0x1;
-  //tmp[16] = 0x0;
-  //char *input[] = {tmp, NULL};
+  char *input[] = {"hello", "test@user:pwddddddddddddddddd","0123456789abcde", "0123456789abcdef", NULL};
 
   /* the key_data is read from the argument list */
   key_data = (unsigned char *)argv[1];
@@ -184,15 +172,14 @@ int main(int argc, char **argv)
     unsigned char *ciphertext;
     int olen, len;
 
-    printf("input =%s, len = %d\n",input[i], strlen(input[i]));
     /* The enc/dec functions deal with binary data and not C strings. strlen() will 
        return length of the string without counting the '\0' string marker. We always
        pass in the marker byte to the encrypt/decrypt functions so that after decryption 
        we end up with a legal C string */
-    olen = len = strlen(input[i])+1;
+    olen = len = strlen(input[i]);
     
     ciphertext = aes_encrypt(en, (unsigned char *)input[i], &len);
-    printf("OK: ciphertext: %s\n", hex_2_string(ciphertext, strlen(ciphertext)));
+    printf("OK: ciphertext: %s\n", hex_2_string(ciphertext, len));
     plaintext = (char *)aes_decrypt(de, ciphertext, &len);
 
     if (strncmp(plaintext, input[i], olen)) 
