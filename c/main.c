@@ -16,14 +16,20 @@
 unsigned char *hex_2_string(const unsigned char* hex, const unsigned int length) {
     unsigned char * result=calloc(length*2+1, 1);
     for (unsigned int i = 0; i < length; ++i) {
-	sprintf(result + i*2, "%02x", hex[i]);
+	    sprintf(result + i*2, "%02x", hex[i]);
     }
     return result;
 }
 
+void print_hex_2_string(const unsigned char* hex, const unsigned int length, const char* hint) {
+  unsigned char *hex_str = hex_2_string(hex, length);
+  printf("%s: %s\n", hint, hex_str);
+  free(hex_str);
+}
+
 void set_value(char * ptr, int len) {
         for (int i=0; i<len; i++) {
-                ptr[i] = 'a';
+          ptr[i] = 'a';
         }
 }
 
@@ -34,8 +40,8 @@ int pkcs7_pad(char *buff, size_t blocksize, size_t startpoint) {
 	int  i;
 
 	if((buff == NULL) || (blocksize > MAXBLOCKSIZE_PKCS7)) {
-		printf("invalid pad arg!\n");
-                return -1;
+    printf("invalid pad arg!\n");
+    return -1;
 	}
 	padbyte = blocksize - startpoint % blocksize;
 	if(padbyte == 0) padbyte = blocksize;
@@ -80,7 +86,9 @@ int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP
 
   // set iv as hardcode "aaa.."
   set_value(iv, 16);
-  printf("Key:  %s, iv: %s\n", hex_2_string(key, 32), hex_2_string(iv, 16));
+
+  print_hex_2_string(key, 32, "Key");
+  print_hex_2_string(iv, 16, "iv");
 
   EVP_CIPHER_CTX_init(e_ctx);
   EVP_EncryptInit_ex(e_ctx, EVP_aes_256_cbc(), NULL, key, iv);
@@ -179,7 +187,7 @@ int main(int argc, char **argv)
     olen = len = strlen(input[i]);
     
     ciphertext = aes_encrypt(en, (unsigned char *)input[i], &len);
-    printf("OK: ciphertext: %s\n", hex_2_string(ciphertext, len));
+    print_hex_2_string(ciphertext, strlen(ciphertext), "OK: ciphertext");
     plaintext = (char *)aes_decrypt(de, ciphertext, &len);
 
     if (strncmp(plaintext, input[i], olen)) 
